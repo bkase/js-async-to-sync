@@ -1,0 +1,32 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+</head>
+<body>
+<script src="asyncToSync.js"></script>
+<script>
+
+window.addEventListener('load', function() {
+
+  let fns = {
+    'test_timeout': function(msecs, cb){
+        setTimeout(function(){
+          cb(4, msecs, 7);
+        }, msecs);
+    }
+
+  }
+  prepAsyncToSyncWindow(fns, function onready(){
+    sync = new Worker("sync.js");
+    sync.onmessage = function(msg){
+      async.postMessage(msg.data);
+    }
+  });
+});
+
+</script>
+see console.log()
+</body>
+</html>
