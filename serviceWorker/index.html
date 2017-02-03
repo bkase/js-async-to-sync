@@ -20,9 +20,6 @@ window.addEventListener('load', function() {
   }
   prepAsyncToSyncWindow(fns, function onready(){
     sync = new Worker("sync.js");
-    sync.onmessage = function(msg){
-      async.postMessage(msg.data);
-    }
   });
 });
 
