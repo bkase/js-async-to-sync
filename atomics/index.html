@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title></title>
+  <script type="application/javascript">
+  // i32 -> [u8]
+  function bytify(x) {
+    return [
+      (x >> 24) & 0xFF,
+      (x >> 16) & 0xFF,
+      (x >> 8) & 0xFF,
+      x & 0xFF
+    ];
+  }
+
+  //
+  // Initialization
+  //
+  const worker = new Worker("worker.js");
+  // 500k buffer (needs to be big enough for any async results)
+  const buf = new SharedArrayBuffer(
+      500 * 1024 * Uint8Array.BYTES_PER_ELEMENT);
+  Atomics.store(new Int32Array(buf), 0, 0); // start with zero
+  worker.postMessage({'$asyncToSync': 'init', buf}); // send to worker
+
+  //
+  // Async RPC handler
+  //
+  const encoder = new TextEncoder("utf-8");
+  worker.onmessage = function(msg) {
+    const { $asyncToSync } = msg.data
+    if ($asyncToSync === 'invoke') {
+      const { fn, t, buf } = msg.data;
+      // TODO: Don't use eval
+      let rpc; eval("rpc = " + fn); // make the rpc function from string
+      // invoke by applying with the inputs (t)
+      // and the callback (since this is an async function)
+      rpc.apply(null, t.concat([function cb() {
+        // serialize the args
+        const args = Array.prototype.slice.call(arguments);
+        const str = JSON.stringify(args);
+        const encodedStr = encoder.encode(str);
+        
+        // store the data length-prefixed in our huge buffer
+        // leaving space for our wake-wait i32
+        const target = new Uint8Array(buf);
+        target.set(bytify(encodedStr.length), 4);
+        target.set(encodedStr, 8);
+
+        // wake up the worker since we've loaded the results
+        Atomics.wake(new Int32Array(buf), 0, 1);
+      }]));
+    }
+  }
+  </script>
+</head>
+<body>
+  Look at console.log() 
+</body>
+</html>
+
+
