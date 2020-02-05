@@ -34,7 +34,7 @@ function asyncToSyncFactory(buf) {
       // read the length-prefixed result (skipping the firs i32)
       const resRaw = new Uint8Array(buf)
       const resLen = unbytify(resRaw.subarray(4, 8));
-      const resStr = (new Uint8Array(buf)).subarray(8, resLen+8);
+      const resStr = new Uint8Array((new Uint8Array(buf)).subarray(8, resLen+8));
       const str = decoder.decode(resStr);
       return JSON.parse(str);
     };
